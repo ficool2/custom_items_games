@@ -39,6 +39,11 @@ struct ModuleInfo
 			modName, base, base + size, size);
 		return true;
 	}
+
+	bool ValidAddress(intptr_t addr)
+	{
+		return (addr > base) && (addr < (base + size));
+	}
 };
 
 #define MODULE(name) #name, 0, 0

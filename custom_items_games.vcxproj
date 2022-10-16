@@ -18,6 +18,16 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="address.h" />
+    <ClInclude Include="detours.h" />
+    <ClInclude Include="helpers.h" />
+    <ClInclude Include="module.h" />
+    <ClInclude Include="plugin.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="plugin.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -128,17 +138,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\Users\max6\source\repos\tf_sig_plugin\tf_sig_plugin\plugin.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\Users\max6\source\repos\tf_sig_plugin\tf_sig_plugin\address.h" />
-    <ClInclude Include="..\..\Users\max6\source\repos\tf_sig_plugin\tf_sig_plugin\detours.h" />
-    <ClInclude Include="..\..\Users\max6\source\repos\tf_sig_plugin\tf_sig_plugin\helpers.h" />
-    <ClInclude Include="..\..\Users\max6\source\repos\tf_sig_plugin\tf_sig_plugin\functions.h" />
-    <ClInclude Include="..\..\Users\max6\source\repos\tf_sig_plugin\tf_sig_plugin\plugin.h" />
-    <ClInclude Include="..\..\Users\max6\source\repos\tf_sig_plugin\tf_sig_plugin\module.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

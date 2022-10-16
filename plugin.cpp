@@ -1,5 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
-
 #include <cstdio>
 #include <vector>
 
@@ -8,12 +6,12 @@
 #include <Psapi.h>
 #include "detours.h"
 
-#include "iplugin.h"
+#include "plugin.h"
 
 #include "helpers.h"
 #include "module.h"
 #include "address.h"
-#include "hook.h"
+#include "functions.h"
 
 class CPlugin : public IPlugin
 {
@@ -80,7 +78,7 @@ bool CPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameSer
 
 	LoadDetours();
 
-	Log(Color(0, 255, 0, 255), "Loaded Schema Sig Bypasser plugin successfully\n");
+	Log(Color(0, 255, 0, 255), "Loaded plugin successfully\n");
 
 	return true;
 }
@@ -96,8 +94,8 @@ bool CPlugin::FindLog()
 	if (!Handle)
 		return false;
 
-	Log = (LogFunc)GetProcAddress(Handle, "?ConColorMsg@@YAXABVColor@@PBDZZ");
-	if (!Log)
+	LogFunc = (ConColorMsg)GetProcAddress(Handle, "?ConColorMsg@@YAXABVColor@@PBDZZ");
+	if (!LogFunc)
 		return false;
 
 	FreeLibrary(Handle);

@@ -1,5 +1,25 @@
 #pragma once
 
+intptr_t Deref(intptr_t addr)
+{
+	return *(intptr_t*)addr;
+}
+
+struct Offset
+{
+	intptr_t offs;
+	ModuleName mod;
+
+	Offset(ModuleName _mod, intptr_t _offs) 
+	{ 
+		offs = _offs;
+		mod = _mod; 
+	}
+	
+	intptr_t Get() { return modules[mod].base + offs; }
+	intptr_t Deref() { return ::Deref(modules[mod].base + offs); }
+};
+
 struct AddressBase;
 typedef std::vector<AddressBase*> AddressList;
 const int maxAddresses = 2;
@@ -8,6 +28,8 @@ struct AddressBase
 {
 	virtual bool Find() = 0;
 };
+
+#pragma optimize("", off)
 
 template <class addrtype>
 struct AddressInfo : public AddressBase
@@ -72,9 +94,19 @@ struct AddressInfo : public AddressBase
 		}
 
 		if (foundAddr == 0)
+		{
 			Log(Color(255, 0, 0, 255), "Failed to find signature for %s\n", name);
+		}
 
 		return foundAddr != 0;
+	}
+
+	addrtype& Resolve(intptr_t address)
+	{
+		for (int k = 0; k < maxAddresses; k++)
+			if (modules[mod[k]].ValidAddress(address))
+				return addr[k];
+		UNREACHABLE;
 	}
 
 	constexpr addrtype& operator[](ModuleName m)
@@ -85,6 +117,8 @@ struct AddressInfo : public AddressBase
 		UNREACHABLE;
 	}
 };
+
+#pragma optimize("", on)
 
 std::vector<AddressBase*> addresses;
 

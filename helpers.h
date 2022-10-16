@@ -18,5 +18,11 @@ struct Color
 
 #define UNREACHABLE __assume(0)
 
-typedef void (*LogFunc)(const Color& clr, const char* msg, ...);
-LogFunc Log = nullptr;
+#define PLUGIN_NAME "[Custom Items Game] "
+
+typedef void (*ConColorMsg)(const Color& clr, const char* msg, ...);
+ConColorMsg LogFunc = nullptr;
+
+#define Log(clr, msg, ...) \
+LogFunc(clr, PLUGIN_NAME); \
+LogFunc(clr, msg, __VA_ARGS__);
