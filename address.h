@@ -1,7 +1,5 @@
 #pragma once
 
-typedef intptr_t Offset;
-
 struct AddressBase;
 typedef std::vector<AddressBase*> AddressList;
 const int maxAddresses = 2;
