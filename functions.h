@@ -3,15 +3,39 @@
 #define CUSTOM_ITEMS_GAME "scripts/items/items_game_custom.txt"
 #define CUSTOM_ITEMS_GAME_SIG CUSTOM_ITEMS_GAME ".sig"
 
-Offset offset_server_econItemSchema(MOD_SERVER, 0x9D2534);
-Offset offset_server_fullFilesystem(MOD_SERVER, 0xA6C208);
+intptr_t server_fileSystem = 0;
+
+void gameStats_loadFromFile_resolve(AddressInfo<intptr_t>& addr, ModuleName mod)
+{
+	server_fileSystem = Deref(addr[mod] + 42);
+	Log(Color(0, 255, 200, 255), "Filesystem found at 0x%X in %s.%s\n", server_fileSystem, modules[mod].name, "dll");
+}
+
+typedef intptr_t gameStats_loadFromFile;
+ADDR_CALLBACK(
+	gameStats_loadFromFile,
+	"CBaseGameStats::LoadFromFile", 
+	MOD_SERVER,
+	\x55\x8B\xEC\x81\xEC\x38\x02\x00\x00\xA1\x2A\x2A\x2A\x2A,
+	xxxxxxxxxx????,
+	gameStats_loadFromFile_resolve
+);
+
+typedef intptr_t (*econItemSystem)();
+ADDR(
+	econItemSystem,
+	"CTFItemSystem",
+	MOD_SERVER,
+	\xA1\x2A\x2A\x2A\x2A\x85\xC0\x75\x2A\x56,
+	x????xxx?x
+);
 
 bool customItemsGameFound = false;
 
 typedef bool (__thiscall** filesystem_fileExists)(intptr_t, const char*, const char*);
 bool function_filesystem_fileExists(const char* filename)
 {
-	intptr_t filesystem = offset_server_fullFilesystem.Deref() + 4;
+	intptr_t filesystem = Deref(server_fileSystem) + 4;
 	return (*(filesystem_fileExists)(Deref(filesystem) + 40))(filesystem, filename, nullptr);
 }
 
@@ -20,12 +44,12 @@ bool helper_check_custom_itemsgame()
 	bool foundCustom = true;
 	if (!function_filesystem_fileExists(CUSTOM_ITEMS_GAME))
 	{
-		Log(Color(255, 0, 127, 255), PLUGIN_NAME "Server: %s not found, loading default items_game.txt ...\n", CUSTOM_ITEMS_GAME);
+		Log(Color(255, 0, 127, 255), "Server: %s not found, loading default items_game.txt ...\n", CUSTOM_ITEMS_GAME);
 		foundCustom = false;
 	}
 	if (!function_filesystem_fileExists(CUSTOM_ITEMS_GAME_SIG))
 	{
-		Log(Color(255, 0, 127, 255), PLUGIN_NAME "Server: %s not found, loading default items_game.txt ...\n", CUSTOM_ITEMS_GAME_SIG);
+		Log(Color(255, 0, 127, 255), "Server: %s not found, loading default items_game.txt ...\n", CUSTOM_ITEMS_GAME_SIG);
 		foundCustom = false;
 	}
 	customItemsGameFound = foundCustom;
@@ -66,7 +90,7 @@ void __fastcall hook_client_econItemSystem_parseItemSchemaFile(intptr_t thisptr,
 	if (helper_check_custom_itemsgame())
 	{
 		filename = CUSTOM_ITEMS_GAME;
-		hook_server_econItemSystem_parseItemSchemaFile(offset_server_econItemSchema.Deref(), edx, filename);
+		hook_server_econItemSystem_parseItemSchemaFile(address_econItemSystem[MOD_SERVER](), edx, filename);
 		Log(Color(0, 255, 127, 255), "Client: Loading %s...\n", filename);
 	}
 	address_econItemSystem_parseItemSchemaFile[MOD_CLIENT](thisptr, edx, filename);

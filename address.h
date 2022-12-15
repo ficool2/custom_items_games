@@ -18,6 +18,12 @@ struct Offset
 	
 	intptr_t Get() { return modules[mod].base + offs; }
 	intptr_t Deref() { return ::Deref(modules[mod].base + offs); }
+
+	const Offset& operator=( const intptr_t _offs )
+	{
+		offs = _offs;
+		return *this;
+	}
 };
 
 struct AddressBase;
@@ -29,20 +35,21 @@ struct AddressBase
 	virtual bool Find() = 0;
 };
 
-#pragma optimize("", off)
-
 template <class addrtype>
 struct AddressInfo : public AddressBase
 {
+	typedef void (*callback)(AddressInfo<addrtype>& addr, ModuleName mod);
+
 	const char* name;
 	const char* sig;
 	size_t		len;
 	const char* mask;
 	addrtype	addr[maxAddresses];
 	ModuleName	mod[maxAddresses];
+	callback	onFind;
 
 	AddressInfo(const char* _name, const char* _sig, size_t _len, const char* _mask,
-		ModuleName _mod1, ModuleName _mod2, AddressList& list)
+		ModuleName _mod1, ModuleName _mod2, AddressList& list, callback _onFind = nullptr )
 	{
 		name = _name;
 		sig = _sig;
@@ -51,6 +58,7 @@ struct AddressInfo : public AddressBase
 		memset(addr, 0, sizeof(addr));
 		mod[0] = _mod1;
 		mod[1] = _mod2;
+		onFind = _onFind;
 		list.push_back(this);
 	}
 
@@ -91,6 +99,11 @@ struct AddressInfo : public AddressBase
 			}
 
 			addr[m] = (addrtype)ptr;
+			if (ptr)
+			{
+				if (onFind)
+					onFind(*this, curmod);
+			}
 		}
 
 		if (foundAddr == 0)
@@ -118,8 +131,6 @@ struct AddressInfo : public AddressBase
 	}
 };
 
-#pragma optimize("", on)
-
 std::vector<AddressBase*> addresses;
 
 #define CHECK_SIG(name, sig, mask) static_assert(sizeof(#sig) == sizeof(#mask), "Mismatch in signature/mask length for " name)
@@ -130,6 +141,10 @@ CHECK_SIG(name, sig, mask);
 
 #define ADDR_GAME(var, name, sig, mask) \
 AddressInfo<var> address_##var = {name, #sig, sizeof(#sig) - 1, #mask, MOD_CLIENT, MOD_SERVER, addresses}; \
+CHECK_SIG(name, sig, mask);
+
+#define ADDR_CALLBACK(var, name, mod, sig, mask, callback) \
+AddressInfo<var> address_##var = {name, #sig, sizeof(#sig) - 1, #mask, mod, MOD_INVALID, addresses, callback}; \
 CHECK_SIG(name, sig, mask);
 
 #define DETOUR_LOAD(addrtype) \
@@ -145,5 +160,5 @@ for (int k = 0; k < maxAddresses; k++) \
 if (address_##addrtype.addr[k]) DetourDetach(&(LPVOID&)address_##addrtype.addr[k], &hook_##addrtype);
 
 #define DETOUR_UNLOAD_GAME(addrtype) \
-if (address_##addrtype[MOD_SERVER]) DetourDetach(&(LPVOID&)address_##addrtype[MOD_CLIENT], &hook_client_##addrtype); \
+if (address_##addrtype[MOD_CLIENT]) DetourDetach(&(LPVOID&)address_##addrtype[MOD_CLIENT], &hook_client_##addrtype); \
 if (address_##addrtype[MOD_SERVER]) DetourDetach(&(LPVOID&)address_##addrtype[MOD_SERVER], &hook_server_##addrtype);

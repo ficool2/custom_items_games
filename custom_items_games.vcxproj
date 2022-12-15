@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="address.h" />
     <ClInclude Include="detours.h" />
+    <ClInclude Include="functions.h" />
     <ClInclude Include="helpers.h" />
     <ClInclude Include="module.h" />
     <ClInclude Include="plugin.h" />
