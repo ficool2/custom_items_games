@@ -7,6 +7,7 @@
 #include "detours.h"
 
 #include "plugin.h"
+#include "filesystem.h"
 
 #include "helpers.h"
 #include "module.h"
@@ -46,6 +47,8 @@ public:
 
 CPlugin g_Plugin;
 
+IBaseFileSystem* filesystem = nullptr;
+
 extern "C" __declspec(dllexport) void* CreateInterface(const char* pName, int* pReturnCode)
 { 
 	if (!strcmp(INTERFACEVERSION_IPLUGIN, pName))
@@ -68,7 +71,17 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 bool CPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory)
 {
 	if (!FindLog())
+	{
+		Log(Color(255, 0, 0, 255), "Failed to find logging func\n");
 		return false;
+	}
+
+	filesystem = (IBaseFileSystem*)interfaceFactory(BASEFILESYSTEM_INTERFACE_VERSION, NULL);
+	if (!filesystem)
+	{
+		Log(Color(255, 0, 0, 255), "Failed to find filesystem\n");
+		return false;
+	}
 
 	if (!FindModules())
 		return false;

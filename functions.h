@@ -1,25 +1,7 @@
-#pragma optimize("", off)
-
 #define CUSTOM_ITEMS_GAME "scripts/items/items_game_custom.txt"
 #define CUSTOM_ITEMS_GAME_SIG CUSTOM_ITEMS_GAME ".sig"
 
-intptr_t server_fileSystem = 0;
-
-void gameStats_loadFromFile_resolve(AddressInfo<intptr_t>& addr, ModuleName mod)
-{
-	server_fileSystem = Deref(addr[mod] + 42);
-	Log(Color(0, 255, 200, 255), "Filesystem found at 0x%X in %s.%s\n", server_fileSystem, modules[mod].name, "dll");
-}
-
-typedef intptr_t gameStats_loadFromFile;
-ADDR_CALLBACK(
-	gameStats_loadFromFile,
-	"CBaseGameStats::LoadFromFile", 
-	MOD_SERVER,
-	\x55\x8B\xEC\x81\xEC\x38\x02\x00\x00\xA1\x2A\x2A\x2A\x2A,
-	xxxxxxxxxx????,
-	gameStats_loadFromFile_resolve
-);
+extern IBaseFileSystem* filesystem;
 
 typedef intptr_t (*econItemSystem)();
 ADDR(
@@ -32,22 +14,15 @@ ADDR(
 
 bool customItemsGameFound = false;
 
-typedef bool (__thiscall** filesystem_fileExists)(intptr_t, const char*, const char*);
-bool function_filesystem_fileExists(const char* filename)
-{
-	intptr_t filesystem = Deref(server_fileSystem) + 4;
-	return (*(filesystem_fileExists)(Deref(filesystem) + 40))(filesystem, filename, nullptr);
-}
-
 bool helper_check_custom_itemsgame()
 {
 	bool foundCustom = true;
-	if (!function_filesystem_fileExists(CUSTOM_ITEMS_GAME))
+	if (!filesystem->FileExists(CUSTOM_ITEMS_GAME))
 	{
 		Log(Color(255, 0, 127, 255), "Server: %s not found, loading default items_game.txt ...\n", CUSTOM_ITEMS_GAME);
 		foundCustom = false;
 	}
-	if (!function_filesystem_fileExists(CUSTOM_ITEMS_GAME_SIG))
+	if (!filesystem->FileExists(CUSTOM_ITEMS_GAME_SIG))
 	{
 		Log(Color(255, 0, 127, 255), "Server: %s not found, loading default items_game.txt ...\n", CUSTOM_ITEMS_GAME_SIG);
 		foundCustom = false;
@@ -96,6 +71,41 @@ void __fastcall hook_client_econItemSystem_parseItemSchemaFile(intptr_t thisptr,
 	address_econItemSystem_parseItemSchemaFile[MOD_CLIENT](thisptr, edx, filename);
 }
 
+bool is_demo_branch()
+{
+	FileHandle_t f = filesystem->Open("steam.inf", "r");
+	if (!f)
+	{
+		Log(Color(255, 0, 0, 255), "Failed to open steam.inf\n");
+		return false;
+	}
+
+	bool demo_branch = false;
+	bool patch_version = false;
+
+	char buffer[256];
+	filesystem->Read(buffer, sizeof(buffer), f);
+
+	char* p = strtok(buffer, "=\r\n");
+	while (p)
+	{
+		if (patch_version)
+		{
+			if (atoi(p) <= 8207200)
+				demo_branch = true;
+			break;
+		}
+
+		if (!strcmp(p, "PatchVersion"))
+			patch_version = true;
+
+		p = strtok(NULL, "=\r\n");
+	}
+
+	filesystem->Close(f);
+	return demo_branch;
+}
+
 typedef bool (__fastcall* gcUpdateItemSchema_runJob)(intptr_t, void*, void*);
 ADDR_GAME(
 	gcUpdateItemSchema_runJob,
@@ -108,6 +118,10 @@ void __fastcall hook_gcUpdateItemSchema_runJob(intptr_t thisptr, void* edx, void
 	if (customItemsGameFound)
 	{
 		Log(Color(0, 255, 127, 255), "Blocked item schema update from GC\n");
+	}
+	else if (is_demo_branch())
+	{
+		Log(Color(0, 255, 127, 255), "Forcefully blocked item schema update from GC (demo branch detected)\n");
 	}
 	else
 	{
